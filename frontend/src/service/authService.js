@@ -1,7 +1,7 @@
 // frontend/src/services/authService.js
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'countries-app-production-49e4.up.railway.app';
+const API_URL ='https://countries-app-production-49e4.up.railway.app/';
 
 // Register user
 export const register = async (userData) => {
