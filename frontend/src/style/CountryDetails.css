@@ -166,24 +166,28 @@
   color: #b0b0b0;
 }
 
-.country-map-link {
-  margin-top: 30px;
+.country-map-links {
+  margin-top: 20px; /* Adds space above the map buttons */
+  display: flex;
+  gap: 15px; /* Adds space between the buttons */
+  flex-wrap: wrap; /* Makes it responsive if screen is small */
 }
 
 .map-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background-color: #4285f4;
+  padding: 10px 16px;
+  background-color: #007bff;
   color: white;
-  border-radius: 5px;
+  border-radius: 6px;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
 
 .map-button:hover {
-  background-color: #3367d6;
+  background-color: #0056b3;
 }
 
 .error {

@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CountryCard from './CountryCard';
 import CountryDetails from './CountryDetails';
-import './Dashboard.css';
+import '../style/Dashboard.css';
 import { FaStar, FaMoon, FaSun } from 'react-icons/fa';
+import { 
+  getAllCountries, 
+  getCountriesByRegion, 
+  getCountryByName 
+} from '../service/countryService';
 
 const Dashboard = () => {
   const [countries, setCountries] = useState([]);
@@ -45,18 +49,14 @@ const Dashboard = () => {
     }
   }, [user?.id]);
 
-  // Fetch countries data
+  // Fetch countries data using the first API endpoint
   useEffect(() => {
     const fetchCountries = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('https://restcountries.com/v3.1/all');
-        // Sort countries alphabetically by name
-        const sortedCountries = response.data.sort((a, b) => 
-          a.name.common.localeCompare(b.name.common)
-        );
-        setCountries(sortedCountries);
-        setFilteredCountries(sortedCountries);
+        const data = await getAllCountries();
+        setCountries(data);
+        setFilteredCountries(data);
       } catch (err) {
         setError('Failed to fetch countries data. Please try again later.');
         console.error(err);
@@ -75,25 +75,9 @@ const Dashboard = () => {
     }
   }, [favorites, user?.id]);
 
+  // Filter countries based on search term and region
   useEffect(() => {
     let result = countries;
-
-    // Apply search filter
-    if (searchTerm) {
-      result = result.filter(country => 
-        country.name.common.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (country.capital && country.capital.some(cap => 
-          cap.toLowerCase().includes(searchTerm.toLowerCase())
-        ))
-      );
-    }
-
-    // Apply region filter
-    if (regionFilter) {
-      result = result.filter(country => 
-        country.region === regionFilter
-      );
-    }
 
     // Apply favorites filter
     if (showFavorites) {
@@ -103,7 +87,90 @@ const Dashboard = () => {
     }
 
     setFilteredCountries(result);
-  }, [searchTerm, regionFilter, countries, showFavorites, favorites]);
+  }, [countries, showFavorites, favorites]);
+
+  // Handle region filter change using API endpoint
+  const handleRegionChange = async (region) => {
+    setRegionFilter(region);
+    
+    if (region) {
+      try {
+        setLoading(true);
+        const data = await getCountriesByRegion(region);
+        
+        // If showing favorites, filter the region results for favorites only
+        if (showFavorites) {
+          setFilteredCountries(data.filter(country => favorites.includes(country.cca3)));
+        } else {
+          setFilteredCountries(data);
+        }
+      } catch (err) {
+        setError(`Failed to fetch countries for region ${region}`);
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // If no region selected, revert to all countries (or favorites if filtered)
+      if (showFavorites) {
+        setFilteredCountries(countries.filter(country => favorites.includes(country.cca3)));
+      } else {
+        setFilteredCountries(countries);
+      }
+    }
+  };
+
+  // Update search term and filter countries directly
+  const handleSearchChange = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    
+    // Filter countries based on search term
+    filterCountries(term);
+  };
+  
+  // Function to filter countries based on search term
+  const filterCountries = (term) => {
+    // If search term is empty, revert to current filter state
+    if (!term.trim()) {
+      if (regionFilter) {
+        // Just apply region filter without API call
+        const regionFiltered = countries.filter(country => 
+          country.region === regionFilter
+        );
+        
+        setFilteredCountries(showFavorites 
+          ? regionFiltered.filter(country => favorites.includes(country.cca3)) 
+          : regionFiltered
+        );
+      } else {
+        setFilteredCountries(showFavorites 
+          ? countries.filter(country => favorites.includes(country.cca3)) 
+          : countries
+        );
+      }
+      return;
+    }
+    
+    // Filter locally first for immediate feedback
+    let result = countries.filter(country => 
+      country.name.common.toLowerCase().includes(term.toLowerCase()) ||
+      (country.capital && country.capital.some(cap => 
+        cap.toLowerCase().includes(term.toLowerCase())
+      ))
+    );
+    
+    // Apply additional filters
+    if (regionFilter) {
+      result = result.filter(country => country.region === regionFilter);
+    }
+    
+    if (showFavorites) {
+      result = result.filter(country => favorites.includes(country.cca3));
+    }
+    
+    setFilteredCountries(result);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -134,6 +201,26 @@ const Dashboard = () => {
     });
   };
   
+  const toggleFavoritesFilter = () => {
+    const newShowFavorites = !showFavorites;
+    setShowFavorites(newShowFavorites);
+    
+    // Apply filter based on new state
+    if (newShowFavorites) {
+      setFilteredCountries(
+        regionFilter 
+        ? filteredCountries.filter(country => favorites.includes(country.cca3))
+        : countries.filter(country => favorites.includes(country.cca3))
+      );
+    } else if (regionFilter) {
+      // If region filter is active, re-apply just that filter
+      handleRegionChange(regionFilter);
+    } else {
+      // If no region filter, show all countries
+      setFilteredCountries(countries);
+    }
+  };
+  
   const regions = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 
   if (loading) return (
@@ -151,11 +238,10 @@ const Dashboard = () => {
         <h1>Countries Explorer</h1>
         <div className="controls">
           <div className="user-info">
-          <button onClick={toggleDarkMode} className="mode-toggle-icon" aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+            <button onClick={toggleDarkMode} className="mode-toggle-icon" aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
               {darkMode ? <FaSun /> : <FaMoon />}
             </button>
             <span>Welcome, {user?.name || 'User'}</span>
-            
             <button onClick={handleLogout} className="logout-btn">Logout</button>
           </div>
         </div>
@@ -171,24 +257,24 @@ const Dashboard = () => {
         <>
           <div className="filters">
             <div className="search-container">
-              
               <input
                 type="text"
-                placeholder="Search for a country or capital..."
+                placeholder="Search for a country..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="search-input"
               />
+              
             </div>
             <div className="filter-controls">
               <div className="region-filter">
                 <select 
                   value={regionFilter} 
-                  onChange={(e) => setRegionFilter(e.target.value)}
+                  onChange={(e) => handleRegionChange(e.target.value)}
                   className="region-select"
                   aria-label="Filter by region"
                 >
-                  <option value="">Filter by Region</option>
+                  <option value="">All Regions</option>
                   {regions.map(region => (   
                     <option key={region} value={region}>{region}</option>
                   ))}
@@ -196,7 +282,7 @@ const Dashboard = () => {
               </div>
               <button 
                 className={`favorite-filter-btn ${showFavorites ? 'active' : ''}`}
-                onClick={() => setShowFavorites(!showFavorites)}
+                onClick={toggleFavoritesFilter}
                 aria-label={showFavorites ? 'Show all countries' : 'Show favorite countries'}
               >
                 <FaStar className="star-icon" />

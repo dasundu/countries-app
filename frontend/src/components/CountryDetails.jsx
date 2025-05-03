@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { FaStar, FaRegStar, FaArrowLeft } from 'react-icons/fa';
-import './CountryDetails.css';
+import { FaStar, FaRegStar, FaArrowLeft, FaGlobe } from 'react-icons/fa';
+import '../style/CountryDetails.css';
+import { getCountriesByCodes } from '../service/countryService';
 
 const CountryDetails = ({ country, onBackClick, darkMode }) => {
   const [isFavorite, setIsFavorite] = useState(false);
@@ -18,19 +18,16 @@ const CountryDetails = ({ country, onBackClick, darkMode }) => {
     }
   }, [country.cca3, user?.id]);
 
+  // Fetch border countries using the API endpoint for multiple codes
   useEffect(() => {
     const fetchBorderCountries = async () => {
       // If country has borders, fetch their data
       if (country.borders && country.borders.length > 0) {
         setLoading(true);
         try {
-          const borderPromises = country.borders.map(border => 
-            axios.get(`https://restcountries.com/v3.1/alpha/${border}`)
-          );
-          
-          const responses = await Promise.all(borderPromises);
-          const borderData = responses.map(response => response.data[0]);
-          setBorderCountries(borderData);
+          // Use the service to fetch border countries by their codes
+          const data = await getCountriesByCodes(country.borders);
+          setBorderCountries(data);
         } catch (err) {
           console.error('Error fetching border countries:', err);
         } finally {
@@ -67,6 +64,14 @@ const CountryDetails = ({ country, onBackClick, darkMode }) => {
     
     localStorage.setItem(`favorites_${user?.id}`, JSON.stringify(updatedFavorites));
     setIsFavorite(!isFavorite);
+  };
+
+  // Function to handle clicking on a border country
+  const handleBorderCountryClick = (borderCountry) => {
+    // If we had routing for individual countries, we could navigate to the border country page
+    // For now, we'll log it
+    console.log('Navigate to border country:', borderCountry.name.common);
+    // Ideally, this would be implemented with a function passed from the parent to navigate
   };
 
   return (
@@ -113,7 +118,11 @@ const CountryDetails = ({ country, onBackClick, darkMode }) => {
             ) : borderCountries.length > 0 ? (
               <div className="border-buttons">
                 {borderCountries.map(border => (
-                  <span key={border.cca3} className="border-country">
+                  <span 
+                    key={border.cca3} 
+                    className="border-country"
+                    onClick={() => handleBorderCountryClick(border)}
+                  >
                     {border.name.common}
                   </span>
                 ))}
@@ -123,16 +132,28 @@ const CountryDetails = ({ country, onBackClick, darkMode }) => {
             )}
           </div>
 
-          {country.maps && country.maps.googleMaps && (
-            <div className="country-map-link">
-              <a 
-                href={country.maps.googleMaps} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="map-button"
-              >
-                View on Google Maps
-              </a>
+          {country.maps && (
+            <div className="country-map-links">
+              {country.maps.googleMaps && (
+                <a 
+                  href={country.maps.googleMaps} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="map-button"
+                >
+                  <FaGlobe /> View on Google Maps
+                </a>
+              )}
+              {country.maps.openStreetMaps && (
+                <a 
+                  href={country.maps.openStreetMaps} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="map-button"
+                >
+                  <FaGlobe /> View on OpenStreetMap
+                </a>
+              )}
             </div>
           )}
         </div>

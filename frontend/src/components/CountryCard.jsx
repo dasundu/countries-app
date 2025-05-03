@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaStar, FaRegStar } from 'react-icons/fa';
-import './CountryCard.css';
+import '../style/CountryCard.css'; // Assuming you have a CSS file for styling
 
 const CountryCard = ({ country, onClick, isFavorite, onFavoriteToggle }) => {
   const formatPopulation = (population) => {
@@ -13,19 +13,20 @@ const CountryCard = ({ country, onClick, isFavorite, onFavoriteToggle }) => {
     : 'N/A';
 
   return (
-    <div className="country-card" onClick={onClick}>
-      <div 
-        className="favorite-icon" 
-        onClick={(e) => {
-          e.stopPropagation();
-          onFavoriteToggle(e);
-        }}
-      >
-        {isFavorite ? 
-          <FaStar className="star filled" /> : 
-          <FaRegStar className="star" />
-        }
-      </div>
+    <div className="country-card" role="region" onClick={onClick}>
+  <div 
+    className="favorite-icon" 
+    data-testid="favorite-icon"
+    onClick={(e) => {
+      e.stopPropagation();
+      onFavoriteToggle(e);
+    }}
+  >
+    {isFavorite ? 
+      <FaStar className="star filled" /> : 
+      <FaRegStar className="star" />
+    }
+  </div>
       <div className="flag-container">
         <img 
           src={country.flags.png} 
