@@ -7,7 +7,7 @@ import { FaStar, FaMoon, FaSun } from 'react-icons/fa';
 import { 
   getAllCountries, 
   getCountriesByRegion, 
-  getCountryByName 
+  
 } from '../service/countryService';
 
 const Dashboard = () => {
