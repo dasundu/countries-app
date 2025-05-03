@@ -17,7 +17,7 @@ const Signup = () => {
     setError('');
     
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/signup', {
+      const response = await axios.post('https://countries-app-production-e0ea.up.railway.app/api/auth/signup', {
         name,
         email,
         password
